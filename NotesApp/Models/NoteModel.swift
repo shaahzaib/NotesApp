@@ -6,3 +6,12 @@
 //
 
 import Foundation
+
+struct NoteModel{
+    let id: UUID = UUID()
+    let title : String
+    let content : String
+    let dateCreated : Date
+    let category : String
+}
+
