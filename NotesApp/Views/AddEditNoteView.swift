@@ -98,7 +98,7 @@ extension AddEditNoteView{
     private func deleteNote() {
         if let note = noteToEdit, let index = vm.notes.firstIndex(of: note) {
             let indexSet = IndexSet(integer: index)
-            vm.deleteNote(indexSet: indexSet)
+            vm.deleteNote(at: indexSet)
             dismiss()
         }
     }

@@ -10,29 +10,14 @@ import SwiftUI
 
 struct NotesListView: View {
     @StateObject private var vm = NoteViewModel()
-    
-    @State private var selectedCategory: String = "All"
-    @State private var searchText : String = ""
-    
-    var filteredNotes: [Note] {
-        if selectedCategory == "All" {
-            return vm.notes
-        } else {
-            return vm.notes.filter { $0.category == selectedCategory }
-        }
-    }
+    @State private var searchText = ""
+    @State private var selectedCategory = "All"
     
     var body: some View {
         NavigationView {
             VStack {
-                
-                ///SearchBar
                 searchBar
-                
-                /// Category Tabs
                 categoryTabs
-                
-                ///Notes list
                 notesList
             }
             .navigationTitle("Notes")
@@ -44,43 +29,12 @@ struct NotesListView: View {
                         Image(systemName: "plus")
                     }
                 }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Button {
-                            vm.generateFakeNotes(count: 1_000)
-                        } label: {
-                            Label("Add 1,000 Notes", systemImage: "doc.on.doc")
-                        }
-                        Button {
-                            vm.generateFakeNotes(count: 10_000)
-                        } label: {
-                            Label("Add 10,000 Notes", systemImage: "doc.on.doc.fill")
-                        }
-                        Button {
-                            vm.generateFakeNotes(count: 100_000)
-                        } label: {
-                            Label("Add 100,000 Notes", systemImage: "tray.full")
-                        }
-                    } label: {
-                        Text("Faker")
-                    }
-                }
             }
         }
     }
-}
-
-
-#Preview {
-    NotesListView()
-}
-
-
-extension NotesListView{
     
-    ///SEARCH BAR
-    private var searchBar:some View{
-        TextField("search...", text: $searchText)
+    private var searchBar: some View {
+        TextField("Search...", text: $searchText)
             .textInputAutocapitalization(.never)
             .disableAutocorrection(true)
             .padding(12)
@@ -88,28 +42,24 @@ extension NotesListView{
             .cornerRadius(10)
             .padding(.horizontal)
             .onChange(of: searchText) {
-                vm.Search(searchText: searchText, category: selectedCategory)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    vm.searchNotes(searchText: searchText, category: selectedCategory)
+                }
             }
     }
     
-    
-    /// CATEGORY TABS
-    private var categoryTabs:some View{
+    private var categoryTabs: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(vm.categoriesWithAll, id: \.self) { category in
                     Text(category)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
-                        .background(
-                            selectedCategory == category
-                            ? Color.blue.opacity(0.2)
-                            : Color.gray.opacity(0.1)
-                        )
+                        .background(selectedCategory == category ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
                         .cornerRadius(12)
                         .onTapGesture {
                             selectedCategory = category
-                            vm.Search(searchText: searchText, category: selectedCategory)
+                            vm.searchNotes(searchText: searchText, category: selectedCategory)
                         }
                 }
             }
@@ -118,28 +68,59 @@ extension NotesListView{
         }
     }
     
-    ///Notes list
-    private var notesList:some View{
-        List{
-            ForEach(filteredNotes, id: \.self) { note in
-                NavigationLink {
-                    AddEditNoteView(vm: vm, noteToEdit: note)
-                } label: {
-                    NoteRowView(note: note)
-                        .onAppear {
-                            if note == vm.notes.last{
-                                vm.loadMoreNotes()
-                            }
-                        }
-                }
-            }
-            .onDelete { indexSet in
-                let note = filteredNotes[indexSet.first!]
-                if let index = vm.notes.firstIndex(of: note) {
-                    vm.deleteNote(indexSet: IndexSet(integer: index))
-                }
-            }
-        }
-    }
+    private var notesList: some View {
+           List {
+               ForEach(Array(vm.notes.enumerated()), id: \.element) { index, note in
+                   NavigationLink {
+                       AddEditNoteView(vm: vm, noteToEdit: note)
+                   } label: {
+                       NoteRowView(note: note)
+                   }
+                   .onAppear {
+                       // Load older when we're near the bottom
+                       if index == vm.notes.count - 3 && !vm.isLoadingOlder && vm.hasMoreOlder {
+                           print("Near bottom (3 from end) - loading older")
+                           vm.loadOlderNotes()
+                       }
+                       
+                       // Load newer when we're near the top
+                       if index == 2 && !vm.isLoadingNewer && vm.hasMoreNewer {
+                           print("Near top (3 from start) - loading newer")
+                           vm.loadNewerNotes()
+                       }
+                   }
+               }
+               
+               // Loading indicators
+               if vm.isLoadingOlder {
+                   HStack {
+                       Spacer()
+                       ProgressView()
+                           .padding()
+                       Spacer()
+                   }
+               }
+               
+               if !vm.hasMoreOlder && !vm.notes.isEmpty {
+                   Text("No more notes")
+                       .foregroundColor(.gray)
+                       .font(.caption)
+                       .frame(maxWidth: .infinity, alignment: .center)
+                       .padding()
+               }
+           }
+           .listStyle(PlainListStyle())
+           .refreshable {
+               // Pull to refresh
+               await withCheckedContinuation { continuation in
+                   vm.refreshNotes()
+                   DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                       continuation.resume()
+                   }
+               }
+           }
+       }
+   }
+#Preview {
+    NotesListView()
 }
-
