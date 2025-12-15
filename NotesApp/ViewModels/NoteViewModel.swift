@@ -9,14 +9,14 @@ import Foundation
 import CoreData
 import SwiftUI
 import Combine
-
+import Fakery
 
 
 class NoteViewModel: ObservableObject {
     @Published var notes: [Note] = []
     
     let container: NSPersistentContainer
-
+let faker = Faker(locale: "en")
     
     // Predefined categories
     let categories = ["Personal", "Work", "Study", "Ideas"]
@@ -137,5 +137,24 @@ class NoteViewModel: ObservableObject {
         }
     }
     
+    //Faker
+    func generateFakeNotes(count: Int) {
+            DispatchQueue.global(qos: .background).async {
+                for _ in 0..<count {
+                    let newNote = Note(context: self.container.viewContext)
+                    newNote.id = UUID()
+                    newNote.title = self.faker.lorem.sentence()
+                    newNote.content = self.faker.lorem.paragraph()
+                    newNote.dateCreated = Date().addingTimeInterval(
+                        Double.random(in: -60*60*24*365...0)
+                    )
+                    newNote.category = self.categories.randomElement()
+                }
+                
+                DispatchQueue.main.async {
+                    self.saveNotes()
+                }
+            }
+        }
     
 }

@@ -31,7 +31,7 @@ struct NotesListView: View {
                 
                 /// Category Tabs
                 categoryTabs
-               
+                
                 ///Notes list
                 notesList
             }
@@ -44,10 +44,32 @@ struct NotesListView: View {
                         Image(systemName: "plus")
                     }
                 }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Button {
+                            vm.generateFakeNotes(count: 1_000)
+                        } label: {
+                            Label("Add 1,000 Notes", systemImage: "doc.on.doc")
+                        }
+                        Button {
+                            vm.generateFakeNotes(count: 10_000)
+                        } label: {
+                            Label("Add 10,000 Notes", systemImage: "doc.on.doc.fill")
+                        }
+                        Button {
+                            vm.generateFakeNotes(count: 100_000)
+                        } label: {
+                            Label("Add 100,000 Notes", systemImage: "tray.full")
+                        }
+                    } label: {
+                        Text("Faker")
+                    }
+                }
             }
         }
     }
 }
+
 
 #Preview {
     NotesListView()
@@ -59,15 +81,15 @@ extension NotesListView{
     ///SEARCH BAR
     private var searchBar:some View{
         TextField("search...", text: $searchText)
-            .textInputAutocapitalization(.never)   
-                .disableAutocorrection(true)
+            .textInputAutocapitalization(.never)
+            .disableAutocorrection(true)
             .padding(12)
             .background(Color(.systemGray6))
             .cornerRadius(10)
             .padding(.horizontal)
             .onChange(of: searchText) {
                 vm.Search(searchText: searchText, category: selectedCategory)
-        }
+            }
     }
     
     
@@ -88,7 +110,7 @@ extension NotesListView{
                         .onTapGesture {
                             selectedCategory = category
                             vm.Search(searchText: searchText, category: selectedCategory)
-                    }
+                        }
                 }
             }
             .padding(.horizontal)
@@ -107,8 +129,8 @@ extension NotesListView{
                         .onAppear {
                             if note == vm.notes.last{
                                 vm.loadMoreNotes()
+                            }
                         }
-                    }
                 }
             }
             .onDelete { indexSet in
@@ -120,4 +142,4 @@ extension NotesListView{
         }
     }
 }
-   
+
